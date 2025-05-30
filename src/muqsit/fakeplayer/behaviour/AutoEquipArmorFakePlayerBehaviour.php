@@ -19,7 +19,7 @@ final class AutoEquipArmorFakePlayerBehaviour implements FakePlayerBehaviour {
 	}
 
 	public static function init(Loader $plugin) : void {
-		$plugin->getServer()->getPluginManager()->registerEvent(EntityItemPickupEvent::class, static function (EntityItemPickupEvent $event) use ($plugin) : void {
+		$plugin->getEngine()->getServer()->getPluginManager()->registerEvent(EntityItemPickupEvent::class, static function (EntityItemPickupEvent $event) use ($plugin) : void {
 			$item = $event->getItem();
 			if (!($item instanceof Armor)) {
 				return;
@@ -53,7 +53,7 @@ final class AutoEquipArmorFakePlayerBehaviour implements FakePlayerBehaviour {
 			$event->cancel();
 			$event->getOrigin()->flagForDespawn();
 			$destination_inventory->setItem($destination_slot, $item);
-		}, EventPriority::NORMAL, $plugin);
+		}, EventPriority::NORMAL, $plugin->getEngine());
 	}
 
 	public function __construct() {

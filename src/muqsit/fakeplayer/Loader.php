@@ -12,6 +12,8 @@ use muqsit\fakeplayer\behaviour\internal\UpdateMovementInternalFakePlayerBehavio
 use muqsit\fakeplayer\info\FakePlayerInfo;
 use muqsit\fakeplayer\listener\FakePlayerListener;
 use muqsit\fakeplayer\network\FakePlayerNetworkSession;
+use plutoniumEngine\Engine;
+use plutoniumEngine\plugins\EnginePluginBase;
 use pocketmine\command\PluginCommand;
 use pocketmine\entity\Skin;
 use pocketmine\event\Listener;
@@ -28,9 +30,11 @@ use pocketmine\network\mcpe\protocol\types\InputMode;
 use pocketmine\network\mcpe\protocol\types\login\ClientData;
 use pocketmine\network\mcpe\StandardEntityEventBroadcaster;
 use pocketmine\network\mcpe\StandardPacketBroadcaster;
+use pocketmine\permission\DefaultPermissions;
+use pocketmine\permission\Permission;
+use pocketmine\permission\PermissionManager;
 use pocketmine\player\Player;
 use pocketmine\player\XboxLivePlayerInfo;
-use pocketmine\plugin\PluginBase;
 use pocketmine\promise\Promise;
 use pocketmine\promise\PromiseResolver;
 use pocketmine\scheduler\ClosureTask;
@@ -42,7 +46,7 @@ use ReflectionMethod;
 use ReflectionProperty;
 use RuntimeException;
 
-final class Loader extends PluginBase implements Listener {
+final class Loader extends EnginePluginBase implements Listener {
 	/** @var FakePlayerListener[] */
 	private array $listeners = [];
 
@@ -57,7 +61,7 @@ final class Loader extends PluginBase implements Listener {
 		"GameVersion" => ProtocolInfo::MINECRAFT_VERSION_NETWORK, /** @see ClientData::$GameVersion */
 	];
 
-	protected function onEnable() : void {
+	public function onEnable(Engine $engine) : void {
 		$client_data = new ReflectionClass(ClientData::class);
 		foreach ($client_data->getProperties() as $property) {
 			$comment = $property->getDocComment();
@@ -79,11 +83,13 @@ final class Loader extends PluginBase implements Listener {
 			};
 		}
 
-		$command = new PluginCommand("fakeplayer", $this, new FakePlayerCommandExecutor($this));
-		$command->setPermission("fakeplayer.command.fakeplayer");
+		$permission = new Permission("fakeplayer.command.fakeplayer");
+		DefaultPermissions::registerPermission($permission, [PermissionManager::getInstance()->getPermission(DefaultPermissions::ROOT_OPERATOR)]);
+		$command = new PluginCommand("fakeplayer", $engine, new FakePlayerCommandExecutor($this));
+		$command->setPermission($permission->getName());
 		$command->setDescription("Control fake player");
 		$command->setAliases(["fp"]);
-		$this->getServer()->getCommandMap()->register($this->getName(), $command);
+		$engine->getServer()->getCommandMap()->register($this->getName(), $command);
 
 		$this->registerListener(new DefaultFakePlayerListener($this));
 		FakePlayerBehaviourFactory::registerDefaults($this);
@@ -94,9 +100,9 @@ final class Loader extends PluginBase implements Listener {
 			}
 		}), 1);
 
-		$this->saveResource("players.json");
+		$engine->saveResource("players.json");
 
-		$configured_players_add_delay = (int) $this->getConfig()->get("configured-players-add-delay");
+		$configured_players_add_delay = (int) $engine->getConfig()->get("configured-players-add-delay");
 		if ($configured_players_add_delay === -1) {
 			$this->addConfiguredPlayers();
 		} else {
@@ -104,12 +110,12 @@ final class Loader extends PluginBase implements Listener {
 				$this->addConfiguredPlayers();
 			}), $configured_players_add_delay);
 		}
-		$this->getServer()->getPluginManager()->registerEvents($this, $this);
+		$engine->getServer()->getPluginManager()->registerEvents($this, $engine);
 	}
 
 	public function registerListener(FakePlayerListener $listener) : void {
 		$this->listeners[spl_object_id($listener)] = $listener;
-		$server = $this->getServer();
+		$server = $this->getEngine()->getServer();
 		foreach ($this->fake_players as $uuid => $_) {
 			$listener->onPlayerAdd($server->getPlayerByRawUUID($uuid));
 		}
@@ -131,10 +137,10 @@ final class Loader extends PluginBase implements Listener {
 	 * @return Promise<Player>
 	 */
 	public function addPlayer(FakePlayerInfo $info) : Promise {
-		$server = $this->getServer();
+		$server = $this->getEngine()->getServer();
 		$network = $server->getNetwork();
 		$type_converter = TypeConverter::getInstance();
-		$packet_broadcaster = new StandardPacketBroadcaster($this->getServer());
+		$packet_broadcaster = new StandardPacketBroadcaster($this->getEngine()->getServer());
 		$entity_event_broadcaster = new StandardEntityEventBroadcaster($packet_broadcaster, $type_converter);
 
 		$internal_resolver = new PromiseResolver();
@@ -220,9 +226,9 @@ final class Loader extends PluginBase implements Listener {
 	 * @return array<string, Promise<Player>>
 	 */
 	public function addConfiguredPlayers() : array {
-		$players = json_decode(Filesystem::fileGetContents($this->getDataFolder() . "players.json"), true, 512, JSON_THROW_ON_ERROR);
+		$players = json_decode(Filesystem::fileGetContents($this->getPath() . DIRECTORY_SEPARATOR . "resources" . DIRECTORY_SEPARATOR . "players.json"), true, 512, JSON_THROW_ON_ERROR);
 
-		$skin_data = \file_get_contents($this->getResourcePath("skin.rgba"));
+		$skin_data = \file_get_contents($this->getPath() . DIRECTORY_SEPARATOR . "resources" . DIRECTORY_SEPARATOR . "skin.rgba");
 		$skin_data !== false || throw new RuntimeException("Failed to read default skin data");
 		$skin = new Skin("Standard_Custom", $skin_data);
 

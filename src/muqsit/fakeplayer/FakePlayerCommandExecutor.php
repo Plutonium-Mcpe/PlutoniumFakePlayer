@@ -39,7 +39,7 @@ final class FakePlayerCommandExecutor implements CommandExecutor {
 				case "tpall":
 					if ($sender instanceof Player) {
 						$pos = $sender->getPosition();
-						foreach ($this->plugin->getServer()->getOnlinePlayers() as $player) {
+						foreach ($this->plugin->getEngine()->getServer()->getOnlinePlayers() as $player) {
 							if ($this->plugin->isFakePlayer($player)) {
 								$player->teleport($pos->add(8 * ((\mt_rand() / \mt_getrandmax()) * 2 - 1), 0.0, 8 * ((\mt_rand() / \mt_getrandmax()) * 2 - 1)));
 							}
@@ -49,7 +49,7 @@ final class FakePlayerCommandExecutor implements CommandExecutor {
 					return true;
 				default:
 					if (isset($args[1])) {
-						$player = $this->plugin->getServer()->getPlayerByPrefix($args[0]);
+						$player = $this->plugin->getEngine()->getServer()->getPlayerByPrefix($args[0]);
 						if ($player !== null) {
 							if ($this->plugin->isFakePlayer($player)) {
 								/** @var FakePlayerNetworkSession $session */

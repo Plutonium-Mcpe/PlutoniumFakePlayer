@@ -2,8 +2,3 @@ name: FakePlayer
 version: 0.0.1
 api: 1.2.9
 main: muqsit\fakeplayer\Loader
-
-permissions:
-  fakeplayer.command.fakeplayer:
-    description: "Control fake player"
-    default: op
