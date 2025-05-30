@@ -20,22 +20,22 @@ use pocketmine\network\mcpe\protocol\types\PlayerAction;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
 
-final class DefaultFakePlayerListener implements FakePlayerListener{
-
+final class DefaultFakePlayerListener implements FakePlayerListener {
 	public function __construct(
 		private Loader $plugin
-	){}
+	) {
+	}
 
-	public function onPlayerAdd(Player $player) : void{
+	public function onPlayerAdd(Player $player) : void {
 		$session = $player->getNetworkSession();
 		assert($session instanceof FakePlayerNetworkSession);
 
 		$entity_runtime_id = $player->getId();
-		$session->registerSpecificPacketListener(PlayStatusPacket::class, new ClosureFakePlayerPacketListener(function(ClientboundPacket $packet, NetworkSession $session) use($entity_runtime_id) : void{
+		$session->registerSpecificPacketListener(PlayStatusPacket::class, new ClosureFakePlayerPacketListener(function (ClientboundPacket $packet, NetworkSession $session) use ($entity_runtime_id) : void {
 			assert($packet instanceof PlayStatusPacket);
-			if($packet->status === PlayStatusPacket::PLAYER_SPAWN){
-				$this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(static function() use($session, $entity_runtime_id) : void{
-					if($session->isConnected()){
+			if ($packet->status === PlayStatusPacket::PLAYER_SPAWN) {
+				$this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(static function () use ($session, $entity_runtime_id) : void {
+					if ($session->isConnected()) {
 						$packet = SetLocalPlayerAsInitializedPacket::create($entity_runtime_id);
 						$serializer = PacketSerializer::encoder();
 						$packet->encode($serializer);
@@ -45,25 +45,25 @@ final class DefaultFakePlayerListener implements FakePlayerListener{
 			}
 		}));
 
-		$session->registerSpecificPacketListener(RespawnPacket::class, new ClosureFakePlayerPacketListener(function(ClientboundPacket $packet, NetworkSession $session) : void{
-			$this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use($session) : void{
-				if($session->isConnected()){
+		$session->registerSpecificPacketListener(RespawnPacket::class, new ClosureFakePlayerPacketListener(function (ClientboundPacket $packet, NetworkSession $session) : void {
+			$this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($session) : void {
+				if ($session->isConnected()) {
 					/** @var Player $player */
 					$player = $session->getPlayer();
 					$player->respawn();
 					$fake_player = $this->plugin->getFakePlayer($player);
-					foreach($fake_player->getBehaviours() as $behaviour){
+					foreach ($fake_player->getBehaviours() as $behaviour) {
 						$behaviour->onRespawn($fake_player);
 					}
 				}
 			}), 40);
 		}));
 
-		$session->registerSpecificPacketListener(ChangeDimensionPacket::class, new ClosureFakePlayerPacketListener(function(ClientboundPacket $packet, NetworkSession $session) : void{
-			$this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use($session) : void{
-				if($session->isConnected()){
+		$session->registerSpecificPacketListener(ChangeDimensionPacket::class, new ClosureFakePlayerPacketListener(function (ClientboundPacket $packet, NetworkSession $session) : void {
+			$this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($session) : void {
+				if ($session->isConnected()) {
 					$player = $session->getPlayer();
-					if($player !== null){
+					if ($player !== null) {
 						$packet = PlayerActionPacket::create(
 							$player->getId(),
 							PlayerAction::DIMENSION_CHANGE_ACK,
@@ -81,7 +81,7 @@ final class DefaultFakePlayerListener implements FakePlayerListener{
 		}));
 	}
 
-	public function onPlayerRemove(Player $player) : void{
+	public function onPlayerRemove(Player $player) : void {
 		// not necessary to unregister listeners because they'll automatically
 		// be gc-d as nothing holds ref to player object?
 	}

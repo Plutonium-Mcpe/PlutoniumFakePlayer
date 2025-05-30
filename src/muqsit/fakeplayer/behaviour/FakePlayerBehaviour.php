@@ -7,8 +7,7 @@ namespace muqsit\fakeplayer\behaviour;
 use muqsit\fakeplayer\FakePlayer;
 use muqsit\fakeplayer\Loader;
 
-interface FakePlayerBehaviour{
-
+interface FakePlayerBehaviour {
 	public static function init(Loader $plugin) : void;
 
 	/**

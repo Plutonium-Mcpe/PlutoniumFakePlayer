@@ -7,7 +7,6 @@ namespace muqsit\fakeplayer\network\listener;
 use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 
-interface FakePlayerPacketListener{
-
+interface FakePlayerPacketListener {
 	public function onPacketSend(ClientboundPacket $packet, NetworkSession $session) : void;
 }

@@ -6,8 +6,7 @@ namespace muqsit\fakeplayer\listener;
 
 use pocketmine\player\Player;
 
-interface FakePlayerListener{
-
+interface FakePlayerListener {
 	public function onPlayerAdd(Player $player) : void;
 
 	public function onPlayerRemove(Player $player) : void;

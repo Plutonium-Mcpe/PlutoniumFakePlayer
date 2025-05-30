@@ -1,7 +1,7 @@
-name: FakePlayer
+name: PlutoniumFakePlayer
+version: 0.0.1
+api: 1.10.6
 main: muqsit\fakeplayer\Loader
-api: 5.14.1
-version: 0.2.5
 
 permissions:
   fakeplayer.command.fakeplayer:

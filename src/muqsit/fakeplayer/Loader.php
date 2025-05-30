@@ -41,11 +41,8 @@ use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;
 use RuntimeException;
-use function array_merge;
-use function file_get_contents;
 
-final class Loader extends PluginBase implements Listener{
-
+final class Loader extends PluginBase implements Listener {
 	/** @var FakePlayerListener[] */
 	private array $listeners = [];
 
@@ -60,20 +57,20 @@ final class Loader extends PluginBase implements Listener{
 		"GameVersion" => ProtocolInfo::MINECRAFT_VERSION_NETWORK, /** @see ClientData::$GameVersion */
 	];
 
-	protected function onEnable() : void{
+	protected function onEnable() : void {
 		$client_data = new ReflectionClass(ClientData::class);
-		foreach($client_data->getProperties() as $property){
+		foreach ($client_data->getProperties() as $property) {
 			$comment = $property->getDocComment();
-			if($comment === false || !in_array("@required", explode(PHP_EOL, $comment), true)){
+			if ($comment === false || !in_array("@required", explode(PHP_EOL, $comment), true)) {
 				continue;
 			}
 
 			$property_name = $property->getName();
-			if(isset($this->default_extra_data[$property_name])){
+			if (isset($this->default_extra_data[$property_name])) {
 				continue;
 			}
 
-			$this->default_extra_data[$property_name] = $property->hasDefaultValue() ? $property->getDefaultValue() : match($property->getType()?->getName()){
+			$this->default_extra_data[$property_name] = $property->hasDefaultValue() ? $property->getDefaultValue() : match ($property->getType()?->getName()) {
 				"string" => "",
 				"int" => 0,
 				"array" => [],
@@ -91,8 +88,8 @@ final class Loader extends PluginBase implements Listener{
 		$this->registerListener(new DefaultFakePlayerListener($this));
 		FakePlayerBehaviourFactory::registerDefaults($this);
 
-		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function() : void{
-			foreach($this->fake_players as $player){
+		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function () : void {
+			foreach ($this->fake_players as $player) {
 				$player->tick();
 			}
 		}), 1);
@@ -100,41 +97,40 @@ final class Loader extends PluginBase implements Listener{
 		$this->saveResource("players.json");
 
 		$configured_players_add_delay = (int) $this->getConfig()->get("configured-players-add-delay");
-		if($configured_players_add_delay === -1){
+		if ($configured_players_add_delay === -1) {
 			$this->addConfiguredPlayers();
-		}else{
-			$this->getScheduler()->scheduleDelayedTask(new ClosureTask(function() : void{
+		} else {
+			$this->getScheduler()->scheduleDelayedTask(new ClosureTask(function () : void {
 				$this->addConfiguredPlayers();
 			}), $configured_players_add_delay);
 		}
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
 	}
 
-	public function registerListener(FakePlayerListener $listener) : void{
+	public function registerListener(FakePlayerListener $listener) : void {
 		$this->listeners[spl_object_id($listener)] = $listener;
 		$server = $this->getServer();
-		foreach($this->fake_players as $uuid => $_){
+		foreach ($this->fake_players as $uuid => $_) {
 			$listener->onPlayerAdd($server->getPlayerByRawUUID($uuid));
 		}
 	}
 
-	public function unregisterListener(FakePlayerListener $listener) : void{
+	public function unregisterListener(FakePlayerListener $listener) : void {
 		unset($this->listeners[spl_object_id($listener)]);
 	}
 
-	public function isFakePlayer(Player $player) : bool{
+	public function isFakePlayer(Player $player) : bool {
 		return isset($this->fake_players[$player->getUniqueId()->getBytes()]);
 	}
 
-	public function getFakePlayer(Player $player) : ?FakePlayer{
+	public function getFakePlayer(Player $player) : ?FakePlayer {
 		return $this->fake_players[$player->getUniqueId()->getBytes()] ?? null;
 	}
 
 	/**
-	 * @param FakePlayerInfo $info
 	 * @return Promise<Player>
 	 */
-	public function addPlayer(FakePlayerInfo $info) : Promise{
+	public function addPlayer(FakePlayerInfo $info) : Promise {
 		$server = $this->getServer();
 		$network = $server->getNetwork();
 		$type_converter = TypeConverter::getInstance();
@@ -158,7 +154,7 @@ final class Loader extends PluginBase implements Listener{
 		$network->getSessionManager()->add($session);
 
 		$rp = new ReflectionProperty(NetworkSession::class, "info");
-		$rp->setValue($session, new XboxLivePlayerInfo($info->xuid, $info->username, $info->uuid, $info->skin, "en_US" /* TODO: Make locale configurable? */, array_merge($info->extra_data, $this->default_extra_data)));
+		$rp->setValue($session, new XboxLivePlayerInfo($info->xuid, $info->username, $info->uuid, $info->skin, "en_US" /* TODO: Make locale configurable? */, \array_merge($info->extra_data, $this->default_extra_data)));
 
 		$rp = new ReflectionMethod(NetworkSession::class, "onServerLoginSuccess");
 		$rp->invoke($session);
@@ -168,7 +164,7 @@ final class Loader extends PluginBase implements Listener{
 		$packet->encode($serializer);
 		$session->handleDataPacket($packet, $serializer->getBuffer());
 
-		$internal_resolver->getPromise()->onCompletion(function(Player $player) use($info, $session) : void{
+		$internal_resolver->getPromise()->onCompletion(function (Player $player) use ($info, $session) : void {
 			$player->setViewDistance(4);
 
 			$this->fake_players[$player->getUniqueId()->getBytes()] = $fake_player = new FakePlayer($session);
@@ -176,45 +172,46 @@ final class Loader extends PluginBase implements Listener{
 			$movement_data = FakePlayerMovementData::new();
 			$fake_player->addBehaviour(new TryChangeMovementInternalFakePlayerBehaviour($movement_data), Limits::INT32_MIN);
 			$fake_player->addBehaviour(new UpdateMovementInternalFakePlayerBehaviour($movement_data), Limits::INT32_MAX);
-			foreach($info->behaviours as $behaviour_identifier => $behaviour_data){
+			foreach ($info->behaviours as $behaviour_identifier => $behaviour_data) {
 				$fake_player->addBehaviour(FakePlayerBehaviourFactory::create($behaviour_identifier, $behaviour_data));
 			}
 
-			foreach($this->listeners as $listener){
+			foreach ($this->listeners as $listener) {
 				$listener->onPlayerAdd($player);
 			}
 
-			if(!$player->isAlive()){
+			if (!$player->isAlive()) {
 				$player->respawn();
 			}
-		}, static function() : void{ /* no internal steps to take if player creation failed */ });
+		}, static function () : void { /* no internal steps to take if player creation failed */ });
 
 		// Create a new promise, to make sure a FakePlayer is always
 		// registered before the caller's onCompletion is called.
 		$result = new PromiseResolver();
-		$internal_resolver->getPromise()->onCompletion(static function(Player $player) use($result) : void{
+		$internal_resolver->getPromise()->onCompletion(static function (Player $player) use ($result) : void {
 			$result->resolve($player);
-		}, static function() use($result) : void{ $result->reject(); });
+		}, static function () use ($result) : void { $result->reject(); });
+
 		return $result->getPromise();
 	}
 
-	public function removePlayer(Player $player, bool $disconnect = true) : void{
-		if(!$this->isFakePlayer($player)){
+	public function removePlayer(Player $player, bool $disconnect = true) : void {
+		if (!$this->isFakePlayer($player)) {
 			throw new InvalidArgumentException("Invalid Player supplied, expected a fake player, got " . $player->getName());
 		}
 
-		if(!isset($this->fake_players[$id = $player->getUniqueId()->getBytes()])){
+		if (!isset($this->fake_players[$id = $player->getUniqueId()->getBytes()])) {
 			return;
 		}
 
 		$this->fake_players[$id]->destroy();
 		unset($this->fake_players[$id]);
 
-		if($disconnect){
+		if ($disconnect) {
 			$player->disconnect("Removed");
 		}
 
-		foreach($this->listeners as $listener){
+		foreach ($this->listeners as $listener) {
 			$listener->onPlayerRemove($player);
 		}
 	}
@@ -222,30 +219,30 @@ final class Loader extends PluginBase implements Listener{
 	/**
 	 * @return array<string, Promise<Player>>
 	 */
-	public function addConfiguredPlayers() : array{
+	public function addConfiguredPlayers() : array {
 		$players = json_decode(Filesystem::fileGetContents($this->getDataFolder() . "players.json"), true, 512, JSON_THROW_ON_ERROR);
 
-		$skin_data = file_get_contents($this->getResourcePath("skin.rgba"));
+		$skin_data = \file_get_contents($this->getResourcePath("skin.rgba"));
 		$skin_data !== false || throw new RuntimeException("Failed to read default skin data");
 		$skin = new Skin("Standard_Custom", $skin_data);
 
 		$promises = [];
-		foreach($players as $uuid => $data){
+		foreach ($players as $uuid => $data) {
 			["xuid" => $xuid, "gamertag" => $gamertag] = $data;
 			$promises[$uuid] = $this->addPlayer(new FakePlayerInfo(Uuid::fromString($uuid), $xuid, $gamertag, $skin, $data["extra_data"] ?? [], $data["behaviours"] ?? []));
 		}
+
 		return $promises;
 	}
 
 	/**
-	 * @param PlayerQuitEvent $event
 	 * @priority MONITOR
 	 */
-	public function onPlayerQuit(PlayerQuitEvent $event) : void{
+	public function onPlayerQuit(PlayerQuitEvent $event) : void {
 		$player = $event->getPlayer();
-		try{
+		try {
 			$this->removePlayer($player, false);
-		}catch(InvalidArgumentException $e){
+		} catch (InvalidArgumentException $e) {
 		}
 	}
 }

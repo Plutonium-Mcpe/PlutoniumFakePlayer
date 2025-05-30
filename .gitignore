@@ -1,0 +1,12 @@
+.fleet/
+vendor/
+.php-cs-fixer.cache
+dev/*
+tmp/
+PlutoniumEngine.phar
+bin/
+.env.local
+.idea/*
+!.idea/codeStyles/
+!.idea/fileTemplates/
+composer.lock
