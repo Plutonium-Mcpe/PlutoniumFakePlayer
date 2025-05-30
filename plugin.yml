@@ -1,4 +1,4 @@
-name: PlutoniumFakePlayer
+name: FakePlayer
 version: 0.0.1
 api: 1.10.6
 main: muqsit\fakeplayer\Loader
